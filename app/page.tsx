@@ -1,65 +1,193 @@
-import Image from "next/image";
+// app/page.tsx
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import type { Vibe, Mood } from "@/lib/types";
+
+// Display labels come from the design; the `value` is the canonical key
+// used everywhere in code (prompts.ts, the API, and the database).
+const VIBES: { value: Vibe; emoji: string; label: string; desc: string }[] = [
+  { value: "hype", emoji: "🔥", label: "Hype Me Up", desc: "Big energy, zero chill" },
+  { value: "roast", emoji: "😂", label: "Roast Me", desc: "No mercy, all love" },
+  { value: "supportive", emoji: "🫂", label: "Just Listen", desc: "I'll hold space" },
+  { value: "reframe", emoji: "🧠", label: "Give Perspective", desc: "Zoom out with me" },
+];
+
+const MOODS: { value: Mood; emoji: string; label: string }[] = [
+  { value: "angry", emoji: "😡", label: "Angry" },
+  { value: "sad", emoji: "😢", label: "Sad" },
+  { value: "frustrated", emoji: "😤", label: "Frustrated" },
+  { value: "overwhelmed", emoji: "😵", label: "Overwhelmed" },
+];
+
+const display = "var(--font-space-grotesk), sans-serif";
+
+export default function LandingPage() {
+  const router = useRouter();
+  const [vibe, setVibe] = useState<Vibe | null>(null);
+  const [mood, setMood] = useState<Mood | null>(null);
+
+  const ready = vibe !== null && mood !== null;
+
+  function startRanting() {
+    if (!ready) return;
+    router.push(`/rant?vibe=${vibe}&mood=${mood}`);
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main
+      className="min-h-screen flex items-center justify-center px-6 py-16"
+      style={{
+        background:
+          "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",
+      }}
+    >
+      <div className="w-full max-w-[920px] flex flex-col items-center gap-9 text-center">
+        {/* Header */}
+        <div
+          className="rant-fade-up flex flex-col items-center gap-3"
+          style={{ animationDelay: "0ms" }}
+        >
+          <div className="relative flex items-center justify-center">
+            <span
+              aria-hidden="true"
+              className="absolute right-full mr-3 top-1/2 -translate-y-1/2 text-[44px] leading-none"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              ⚡
+            </span>
+            <span
+              className="font-bold text-[52px] tracking-[-0.03em]"
+              style={{ fontFamily: display }}
             >
-              Learning
-            </a>{" "}
-            center.
+              RantAI
+            </span>
+          </div>
+          <p className="m-0 text-[21px] text-[#b7abdb]">Say it. All of it.</p>
+        </div>
+
+        {/* Vibe picker */}
+        <section
+          className="rant-fade-up w-full flex flex-col gap-4"
+          style={{ animationDelay: "120ms" }}
+        >
+          <span
+            className="text-[13px] tracking-[0.07em] uppercase text-[#8a7cb8] font-semibold"
+            style={{ fontFamily: display }}
+          >
+            Pick your vibe
+          </span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {VIBES.map((v) => {
+              const selected = vibe === v.value;
+              return (
+                <button
+                  key={v.value}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setVibe(v.value)}
+                  className={[
+                    "group flex flex-col items-start gap-2.5 text-left p-[22px] rounded-[22px] border-2 bg-[#1a1232]",
+                    "transition-all duration-300 ease-out cursor-pointer outline-none",
+                    "focus-visible:ring-2 focus-visible:ring-[#ff2e88] focus-visible:ring-offset-2 focus-visible:ring-offset-[#150d2b]",
+                    selected
+                      ? "border-[#ff2e88] shadow-[0_0_26px_rgba(255,46,136,0.4)] -translate-y-1"
+                      : "border-[#2a2046] hover:border-[#3a2c63] hover:-translate-y-1 hover:shadow-[0_0_22px_rgba(255,46,136,0.15)]",
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "text-[34px] leading-none transition-transform duration-300",
+                      selected ? "scale-110" : "group-hover:scale-110",
+                    ].join(" ")}
+                  >
+                    {v.emoji}
+                  </span>
+                  <span
+                    className="font-semibold text-[18px]"
+                    style={{ fontFamily: display }}
+                  >
+                    {v.label}
+                  </span>
+                  <span className="text-[13px] text-[#9b8fc4]">{v.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Mood picker */}
+        <section
+          className="rant-fade-up w-full flex flex-col gap-4"
+          style={{ animationDelay: "240ms" }}
+        >
+          <span
+            className="text-[13px] tracking-[0.07em] uppercase text-[#8a7cb8] font-semibold"
+            style={{ fontFamily: display }}
+          >
+            How are you feeling?
+          </span>
+          <div className="flex gap-3 justify-center flex-wrap">
+            {MOODS.map((m) => {
+              const selected = mood === m.value;
+              return (
+                <button
+                  key={m.value}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setMood(m.value)}
+                  className={[
+                    "flex items-center gap-2.5 px-[22px] py-3 rounded-full text-[16px] font-semibold border",
+                    "transition-all duration-200 ease-out cursor-pointer outline-none",
+                    "focus-visible:ring-2 focus-visible:ring-[#ff2e88] focus-visible:ring-offset-2 focus-visible:ring-offset-[#150d2b]",
+                    selected
+                      ? "text-white border-transparent shadow-[0_0_22px_rgba(255,46,136,0.35)] -translate-y-0.5"
+                      : "bg-[#1d1535] border-[#2a2046] text-[#cbbef0] hover:border-[#3a2c63] hover:-translate-y-0.5",
+                  ].join(" ")}
+                  style={
+                    selected
+                      ? { background: "linear-gradient(135deg,#ff2e88,#ff7a3c)" }
+                      : undefined
+                  }
+                >
+                  <span>{m.emoji}</span> {m.label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Start */}
+        <div
+          className="rant-fade-up flex flex-col items-center gap-3 mt-1"
+          style={{ animationDelay: "360ms" }}
+        >
+          <button
+            type="button"
+            disabled={!ready}
+            onClick={startRanting}
+            className={[
+              "px-14 py-[18px] rounded-[18px] border-none text-[19px] font-bold text-white outline-none",
+              "transition-all duration-300 ease-out",
+              "focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#150d2b]",
+              ready
+                ? "cursor-pointer hover:-translate-y-0.5 active:scale-[0.98] [animation:rant-glow-pulse_2.6s_ease-in-out_infinite] hover:[animation:none] hover:shadow-[0_0_46px_rgba(255,122,60,0.6)]"
+                : "opacity-40 cursor-not-allowed",
+            ].join(" ")}
+            style={{
+              background: "linear-gradient(135deg,#ff2e88,#ff7a3c)",
+              fontFamily: display,
+            }}
+          >
+            Start Ranting 🔥
+          </button>
+          <p className="m-0 text-[13px] text-[#6f6396] transition-colors duration-300">
+            {ready
+              ? "You're all set — let it out."
+              : "Pick a vibe and a mood to begin"}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

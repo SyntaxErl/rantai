@@ -61,7 +61,7 @@ export default function HistoryPage() {
           </h1>
           <button
             type="button"
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/setup")}
             className="flex-none px-5 py-2.5 rounded-full text-white font-semibold text-[14px] cursor-pointer transition-transform hover:-translate-y-0.5"
             style={{
               background: "linear-gradient(135deg,#ff2e88,#ff7a3c)",

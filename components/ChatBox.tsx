@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import RantSummary from "@/components/RantSummary";
+import ChatSidebar from "@/components/ChatSidebar";
 import { createClient } from "@/lib/supabase";
 import type { Vibe, Mood, Message, RantSummary as RantSummaryData } from "@/lib/types";
 
@@ -260,15 +261,17 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
   }
 
   return (
-    <main
-      className="flex flex-col h-screen overflow-hidden rant-fade-in"
-      style={{
-        background:
-          "radial-gradient(120% 60% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",
-      }}
-    >
+    <div className="flex h-screen overflow-hidden">
+      <ChatSidebar />
+      <main
+        className="flex flex-col flex-1 h-screen overflow-hidden rant-fade-in"
+        style={{
+          background:
+            "radial-gradient(120% 60% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",
+        }}
+      >
       {/* Header */}
-      <header className="rant-enter-down flex-none flex items-center justify-between px-5 md:px-7 py-4 border-b border-[#221940]">
+      <header className="rant-enter-down flex-none flex items-center justify-between px-5 md:px-7 h-[64px] border-b border-[#221940]">
         <div className="flex items-center gap-3.5">
           <span
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[14px] font-semibold"
@@ -283,7 +286,7 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
           </span>
           <button
             type="button"
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/setup")}
             className="text-[14px] font-semibold text-[#9b8fc4] underline underline-offset-[3px] cursor-pointer hover:text-[#cbbef0] transition-colors"
           >
             Switch Vibe
@@ -389,6 +392,7 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
           </button>
         </div>
       </div>
-    </main>
+      </main>
+    </div>
   );
 }

@@ -32,7 +32,7 @@ export default function HistoryCard({ rant }: { rant: RantSession }) {
       type="button"
       onClick={() => setOpen((o) => !o)}
       aria-expanded={open}
-      className="rant-msg-in w-full text-left p-5 rounded-[18px] cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
+      className="rant-msg-in w-full text-left p-5 rounded-[18px] cursor-pointer"
       style={{ background: "#1a1232", border: "1px solid #2a2046" }}
     >
       <div className="flex items-center justify-between gap-3">

@@ -130,7 +130,7 @@ export default function RantSummary({
         <div className="rant-msg-in flex flex-col sm:flex-row gap-3 mt-2">
           <button
             type="button"
-            onClick={() => (onRantAgain ? onRantAgain() : router.push("/"))}
+            onClick={() => (onRantAgain ? onRantAgain() : router.push("/setup"))}
             className="flex-1 py-[17px] rounded-[18px] border-none text-white font-bold text-[17px] cursor-pointer transition-transform hover:-translate-y-0.5"
             style={{
               background: "linear-gradient(135deg,#ff2e88,#ff7a3c)",

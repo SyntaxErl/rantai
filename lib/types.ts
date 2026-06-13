@@ -22,13 +22,14 @@ export interface RantSummary {
 // A full row in the Supabase `rants` table.
 export interface RantSession {
   id: string;
-  user_id: string;
+  user_id: string | null; // null until auth is added
   title: string;
   summary: string;
   vibe: Vibe;
   mood: Mood;
   messages: Message[];
   intensity: number;
+  villain: string;
   created_at: string;
 }
 

@@ -49,6 +49,9 @@ export default function LoginPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
+  // If a rant is in progress (saved by ChatBox), remember its vibe/mood so we
+  // can offer a "back to your rant" button that returns without losing it.
+  const [activeRant, setActiveRant] = useState<{ vibe: string; mood: string } | null>(null);
 
   const configured =
     !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -73,6 +76,27 @@ export default function LoginPage() {
       }
     })();
   }, [configured]);
+
+  // Detect an in-progress conversation so we can show a "back to your rant" link.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("rantai:active");
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s?.vibe && s?.mood) setActiveRant({ vibe: s.vibe, mood: s.mood });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const backToRant = () => {
+    if (activeRant) {
+      router.push(`/rant?vibe=${activeRant.vibe}&mood=${activeRant.mood}`);
+    } else {
+      router.back();
+    }
+  };
 
   async function submit() {
     if (busy) return;
@@ -191,6 +215,19 @@ export default function LoginPage() {
           "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",
       }}
     >
+      {checked && activeRant && (
+        <button
+          type="button"
+          onClick={backToRant}
+          title="Back to your rant"
+          aria-label="Back to your rant"
+          className="rant-msg-in fixed top-5 left-5 z-20 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full text-[#cbbef0] bg-[#1d1535]/80 backdrop-blur border border-[#2a2046] hover:border-[#3a2c63] cursor-pointer transition-colors text-[14px] font-medium"
+          style={{ fontFamily: display }}
+        >
+          <span className="text-[18px] leading-none">&larr;</span>
+          <span>Back to your rant</span>
+        </button>
+      )}
       <div className="w-full max-w-[400px] flex flex-col items-center gap-6">
         {/* Centered wordmark */}
         <div className="rant-msg-in flex items-center justify-center gap-2" style={{ animationDelay: "0s" }}>

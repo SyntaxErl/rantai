@@ -487,7 +487,7 @@ export default function ChatBox({ vibe: initialVibe, mood }: { vibe: Vibe; mood:
       </div>
 
       {/* Composer */}
-      <div className="rant-enter-up flex-none px-5 md:px-7 pt-[18px] pb-6 border-t border-[#221940] flex justify-center">
+      <div className="rant-enter-up flex-none min-h-[96px] px-5 md:px-7 py-[14px] border-t border-[#221940] flex items-center justify-center">
         <div className="w-full max-w-[760px] flex gap-3 items-end">
           <textarea
             ref={textareaRef}

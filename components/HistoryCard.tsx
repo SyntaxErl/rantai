@@ -155,7 +155,7 @@ export default function HistoryCard({
           (rant-msg-in) doesn't trap this fixed overlay inside the card. */}
       {confirmOpen && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6 rant-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 rant-modal-bg"
           style={{ background: "rgba(8,5,18,0.72)" }}
           onClick={() => setConfirmOpen(false)}
         >

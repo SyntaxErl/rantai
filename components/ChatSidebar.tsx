@@ -184,8 +184,8 @@ export default function ChatSidebar({
           )}
         </div>
 
-        {/* Profile */}
-        <div className="flex-none p-3 border-t border-[#221940]">
+        {/* Profile — height matched to the chat composer so the bottom border lines up */}
+        <div className="flex-none h-[96px] px-3 flex items-center border-t border-[#221940]">
           <button
             type="button"
             onClick={() => go("/login")}

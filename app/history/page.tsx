@@ -66,7 +66,7 @@ export default function HistoryPage() {
 
   return (
     <main
-      className="min-h-screen overflow-y-auto px-6 py-14 flex justify-center rant-fade-in"
+      className="h-screen overflow-y-auto rant-scroll px-6 py-14 flex justify-center items-start rant-fade-in"
       style={{
         background:
           "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",

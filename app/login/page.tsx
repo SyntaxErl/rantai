@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import Logo from "@/components/Logo";
 
 const display = "var(--font-space-grotesk), sans-serif";
 const inputCls =
@@ -193,7 +194,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px] flex flex-col items-center gap-6">
         {/* Centered wordmark */}
         <div className="rant-msg-in flex items-center justify-center gap-2" style={{ animationDelay: "0s" }}>
-          <span className="text-[32px] leading-none">⚡</span>
+          <Logo size={32} />
           <span
             className="font-bold text-[32px] leading-none tracking-[-0.03em]"
             style={{ fontFamily: display }}

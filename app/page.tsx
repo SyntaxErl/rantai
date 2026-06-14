@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import Logo from "@/components/Logo";
 
 const display = "var(--font-space-grotesk), sans-serif";
 
@@ -64,7 +65,7 @@ export default function Landing() {
             "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",
         }}
       >
-        <span className="text-[40px] animate-pulse">⚡</span>
+        <span className="animate-pulse inline-flex"><Logo size={40} /></span>
       </main>
     );
   }
@@ -80,7 +81,7 @@ export default function Landing() {
       {/* Hero */}
       <section className="w-full max-w-[760px] flex flex-col items-center text-center gap-6 mt-6">
         <div className="rant-fade-up flex items-center gap-2" style={{ animationDelay: "0ms" }}>
-          <span className="text-[40px] leading-none">⚡</span>
+          <Logo size={40} />
           <span className="font-bold text-[40px] leading-none tracking-[-0.03em]" style={{ fontFamily: display }}>
             RantAI
           </span>

@@ -1,33 +1,18 @@
 // app/api/summary/route.ts
 //
 // POST /api/summary
-// Called once when the user taps "End Rant". Sends the whole conversation to
-// Gemini and asks for a structured summary: { title, summary, intensity, villain }.
+// Called once when the user taps "End Rant". Asks Gemini for a structured
+// summary: { title, summary, intensity, villain } using structured-output mode.
 //
-// Not streamed — we want the complete JSON object back in one piece. Uses
-// Gemini's structured-output mode (responseSchema) so the reply is valid JSON.
-// Safety settings are loosened because rants are angry/emotional by design and
-// we don't want the model to refuse to summarize them.
+// Like the chat route, it walks the free-tier model fallback chain so a single
+// model's daily quota running out doesn't block the summary.
 
-import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { Type } from "@google/genai";
 import { SUMMARY_PROMPT } from "@/lib/prompts";
+import { getAI, MODELS, SAFETY, isRateLimit, rateLimitMessage } from "@/lib/gemini";
+import { createClient as createServerSupabase } from "@/lib/supabase-server";
+import { rateLimit } from "@/lib/ratelimit";
 import type { Message, RantSummary } from "@/lib/types";
-
-let _ai: GoogleGenAI | null = null;
-function getAI() {
-  if (!_ai) _ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  return _ai;
-}
-
-const MODEL = "gemini-2.5-flash-lite";
-
-// Venting involves anger, frustration, sometimes dark talk — allow it through.
-const SAFETY = [
-  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-];
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
@@ -55,70 +40,86 @@ export async function POST(request: Request) {
 
   if (!process.env.GEMINI_API_KEY) {
     return Response.json(
-      {
-        error:
-          "Server is missing GEMINI_API_KEY. Add it to .env.local and restart the dev server.",
-      },
+      { error: "Server is missing GEMINI_API_KEY. Add it to .env.local and restart the dev server." },
       { status: 500 },
     );
+  }
+
+  // --- Require a signed-in user (protects your Gemini quota from abuse) -
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    const supabase = await createServerSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return Response.json({ error: "Please sign in to end a rant." }, { status: 401 });
+    }
+    if (!rateLimit(`summary:${user.id}`, 10, 60_000)) {
+      return Response.json(
+        { error: "Too many summaries in a row — wait a moment and try again." },
+        { status: 429 },
+      );
+    }
   }
 
   const transcript = messages
     .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.content}`)
     .join("\n");
 
-  try {
-    const response = await getAI().models.generateContent({
-      model: MODEL,
-      contents: transcript,
-      config: {
-        systemInstruction: SUMMARY_PROMPT,
-        responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
-        safetySettings: SAFETY,
-        temperature: 0.8,
-      },
-    });
+  let lastErr: unknown = null;
 
-    const raw = (response.text ?? "").trim();
+  for (const model of MODELS) {
+    try {
+      const response = await getAI().models.generateContent({
+        model,
+        contents: transcript,
+        config: {
+          systemInstruction: SUMMARY_PROMPT,
+          responseMimeType: "application/json",
+          responseSchema: RESPONSE_SCHEMA,
+          safetySettings: SAFETY,
+          temperature: 0.8,
+        },
+      });
 
-    // If the model returned nothing, figure out why so we can say something useful.
-    if (!raw) {
-      const reason = response.candidates?.[0]?.finishReason;
-      if (reason === "SAFETY" || reason === "PROHIBITED_CONTENT") {
-        throw new Error("blocked by content filter");
+      const raw = (response.text ?? "").trim();
+      if (!raw) {
+        const reason = response.candidates?.[0]?.finishReason;
+        if (reason === "SAFETY" || reason === "PROHIBITED_CONTENT") {
+          return Response.json(
+            { error: "The model wouldn't summarize this one (content filter). Try ranting a bit more, then end again." },
+            { status: 502 },
+          );
+        }
+        throw new Error("empty response from model");
       }
-      throw new Error("empty response from model");
+
+      const data = JSON.parse(raw) as RantSummary;
+      const intensity = Math.max(1, Math.min(10, Math.round(Number(data.intensity) || 1)));
+
+      return Response.json({
+        title: data.title || "Untitled Rant",
+        summary: data.summary || "",
+        intensity,
+        villain: data.villain || "Unknown",
+      } satisfies RantSummary);
+    } catch (err) {
+      lastErr = err;
+      if (isRateLimit(err)) continue; // quota spent on this model — try the next
+      break; // non-quota error (key/parse/empty) — stop and report below
     }
-
-    const data = JSON.parse(raw) as RantSummary;
-    const intensity = Math.max(1, Math.min(10, Math.round(Number(data.intensity) || 1)));
-
-    const result: RantSummary = {
-      title: data.title || "Untitled Rant",
-      summary: data.summary || "",
-      intensity,
-      villain: data.villain || "Unknown",
-    };
-
-    return Response.json(result);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[/api/summary] error:", err);
-
-    let friendly = "Couldn't generate the summary. Please try again.";
-    let status = 502;
-    if (/api[_ ]?key|unauthor|permission|401|403/i.test(msg)) {
-      friendly =
-        "Invalid Gemini API key. Check GEMINI_API_KEY in .env.local (and restart the dev server).";
-    } else if (/quota|rate|resource.exhausted|429/i.test(msg)) {
-      friendly =
-        "Hit the Gemini free-tier rate limit. Wait a minute, then try ending the rant again.";
-      status = 429;
-    } else if (/blocked|safety|content filter/i.test(msg)) {
-      friendly =
-        "The model wouldn't summarize this one (content filter). Try ranting a bit more, then end again.";
-    }
-    return Response.json({ error: friendly }, { status });
   }
+
+  // Got here = all models rate-limited, or a non-quota error broke the loop.
+  const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+  console.error("[/api/summary] error:", lastErr);
+
+  if (isRateLimit(lastErr)) {
+    return Response.json({ error: rateLimitMessage(lastErr) }, { status: 429 });
+  }
+  if (/api[_ ]?key|unauthor|permission|401|403/i.test(msg)) {
+    return Response.json(
+      { error: "Invalid Gemini API key. Check GEMINI_API_KEY in .env.local (and restart the dev server)." },
+      { status: 502 },
+    );
+  }
+  return Response.json({ error: "Couldn't generate the summary. Please try again." }, { status: 502 });
 }

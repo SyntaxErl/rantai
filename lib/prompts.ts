@@ -28,10 +28,14 @@ export const MOOD_CONTEXT: Record<Mood, string> = {
 // never amplify self-directed harm.
 export const SAFETY_CLAUSE = `IMPORTANT — THIS OVERRIDES EVERYTHING ABOVE. If the user expresses thoughts of self-harm or suicide, an eating disorder, serious distress about their body, weight, or self-worth, abuse, or any genuine mental-health crisis, immediately STOP the persona. Drop the hype, jokes, and roleplay entirely and respond as a sincere, caring human. Do not amplify, validate, or make light of self-directed harm or hopeless beliefs. Gently encourage them to talk with a mental-health professional or someone they trust, and if they may be in crisis, suggest reaching out to a local crisis line or emergency services. Their safety matters far more than staying in character.`;
 
-// Combines a vibe prompt with the mood line and the safety override.
-// Use this in /api/chat.
+// Who built the app. Only surfaced if the user asks. RantAI is the product;
+// it runs on an LLM under the hood, but the *app* was made by its creator.
+export const IDENTITY_CLAUSE = `ABOUT YOU: You are "RantAI", a venting companion app created by software developer Erl Yves Tagaro. If the user asks who made you, who created you, or who built this app, tell them RantAI was built by Erl Yves Tagaro. Keep it short and in-character, then steer back to their rant. Do not bring this up unless they ask.`;
+
+// Combines a vibe prompt with the mood line, the identity note, and the safety
+// override (safety stays last so it outranks everything). Use this in /api/chat.
 export function buildSystemPrompt(vibe: Vibe, mood: Mood): string {
-  return `${VIBE_PROMPTS[vibe]}\n\n${MOOD_CONTEXT[mood]}\n\n${SAFETY_CLAUSE}`;
+  return `${VIBE_PROMPTS[vibe]}\n\n${MOOD_CONTEXT[mood]}\n\n${IDENTITY_CLAUSE}\n\n${SAFETY_CLAUSE}`;
 }
 
 // Sent in a separate call after the rant ends. The model must reply with

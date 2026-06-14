@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { useRouter } from "next/navigation";
 import RantSummary from "@/components/RantSummary";
 import ChatSidebar from "@/components/ChatSidebar";
 import { createClient } from "@/lib/supabase";
@@ -44,18 +43,51 @@ const MOOD_EMOJI: Record<Mood, string> = {
   overwhelmed: "😵",
 };
 
-export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
-  const router = useRouter();
+const ACTIVE_KEY = "rantai:active";
+
+const VIBE_KEYS: Vibe[] = ["hype", "roast", "supportive", "reframe"];
+
+// A chat message, plus optional local-only "system" markers (e.g. a vibe-switch
+// divider) that are shown in the UI but never sent to the API or saved.
+type ChatMsg = Message & { system?: boolean };
+
+// Load an in-progress rant (matched by mood, since the vibe can change mid-rant)
+// so returning from History etc. restores the conversation — and the vibe it was
+// last on — instead of starting over.
+function loadActive(mood: Mood): { messages: ChatMsg[]; vibe: Vibe } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(ACTIVE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as { vibe?: Vibe; mood?: string; messages?: ChatMsg[] };
+    if (
+      saved.mood === mood &&
+      saved.vibe &&
+      Array.isArray(saved.messages) &&
+      saved.messages.length > 0
+    ) {
+      return { messages: saved.messages, vibe: saved.vibe };
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+export default function ChatBox({ vibe: initialVibe, mood }: { vibe: Vibe; mood: Mood }) {
+  const [vibe, setVibe] = useState<Vibe>(() => loadActive(mood)?.vibe ?? initialVibe);
+  const [vibeMenuOpen, setVibeMenuOpen] = useState(false);
   const meta = VIBE_META[vibe];
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMsg[]>(() => loadActive(mood)?.messages ?? []);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [thinking, setThinking] = useState(false); // controls the typing dots
-  const [greetingDone, setGreetingDone] = useState(false);
+  const [greetingDone, setGreetingDone] = useState<boolean>(() => loadActive(mood) !== null);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<RantSummaryData | null>(null);
   const [summarizing, setSummarizing] = useState(false);
+  const [navOpen, setNavOpen] = useState(false); // mobile sidebar drawer
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -64,6 +96,7 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
   // Show the dots for a beat, then type the greeting out character by
   // character, like the AI is composing it.
   useEffect(() => {
+    if (greetingDone) return; // restored from a previous view — skip the greeting
     let cancelled = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const full = meta.greeting;
@@ -119,21 +152,41 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
     el.style.height = `${Math.min(el.scrollHeight + borderY, 160)}px`;
   }, [input]);
 
+  // Keep the input focused after sending (and once the greeting finishes), so
+  // you can keep typing without clicking back into the box each time.
+  useEffect(() => {
+    if (greetingDone && !isStreaming && !summarizing) {
+      textareaRef.current?.focus();
+    }
+  }, [greetingDone, isStreaming, summarizing]);
+
+  // Save the active rant so it survives leaving the page (e.g. opening History)
+  // and coming back. Cleared on End Rant and when a new rant is started (/setup).
+  useEffect(() => {
+    if (typeof window === "undefined" || !greetingDone) return;
+    try {
+      sessionStorage.setItem(ACTIVE_KEY, JSON.stringify({ vibe, mood, messages }));
+    } catch {
+      /* ignore (storage unavailable / quota) */
+    }
+  }, [messages, greetingDone, vibe, mood]);
+
   async function send() {
     const text = input.trim();
     if (!text || isStreaming || !greetingDone) return;
 
     setError(null);
-    const userMsg: Message = { role: "user", content: text };
+    const userMsg: ChatMsg = { role: "user", content: text };
     const withUser = [...messages, userMsg];
     setMessages(withUser);
     setInput("");
     setIsStreaming(true);
     setThinking(true);
 
-    // Build the API payload from the first USER message (drops the greeting).
+    // Build the API payload from the first USER message (drops the greeting) and
+    // strips local-only markers (e.g. vibe-switch dividers).
     const firstUser = withUser.findIndex((m) => m.role === "user");
-    const apiMessages = withUser.slice(firstUser);
+    const apiMessages = withUser.slice(firstUser).filter((m) => !m.system);
 
     // Empty assistant slot we stream into (it is not rendered while empty).
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
@@ -207,7 +260,7 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
       const res = await fetch("/api/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: messages.slice(firstUser) }),
+        body: JSON.stringify({ messages: messages.slice(firstUser).filter((m) => !m.system) }),
       });
       if (!res.ok) {
         let detail = "";
@@ -221,6 +274,13 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
       }
       const data = (await res.json()) as RantSummaryData;
       setSummary(data);
+
+      // The rant is finished — clear the saved draft so returning here starts fresh.
+      try {
+        sessionStorage.removeItem(ACTIVE_KEY);
+      } catch {
+        /* ignore */
+      }
 
       // Best-effort save to Supabase. Skips silently if it isn't configured
       // yet, and never blocks showing the summary.
@@ -237,7 +297,7 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
             summary: data.summary,
             intensity: data.intensity,
             villain: data.villain,
-            messages: messages.slice(firstUser),
+            messages: messages.slice(firstUser).filter((m) => !m.system),
           });
         } catch (saveErr) {
           console.error("[rant save] failed:", saveErr);
@@ -248,6 +308,22 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
     } finally {
       setSummarizing(false);
     }
+  }
+
+  function switchVibe(next: Vibe) {
+    setVibeMenuOpen(false);
+    if (next === vibe) return;
+    setVibe(next);
+    // Local-only divider so the tone change is visible in the transcript
+    // (filtered out of API calls and saves, so it costs no tokens).
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: `Switched to ${VIBE_META[next].emoji} ${VIBE_META[next].label}`,
+        system: true,
+      },
+    ]);
   }
 
   const canEnd =
@@ -262,7 +338,7 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <ChatSidebar />
+      <ChatSidebar mobileOpen={navOpen} onClose={() => setNavOpen(false)} />
       <main
         className="flex flex-col flex-1 h-screen overflow-hidden rant-fade-in"
         style={{
@@ -271,26 +347,61 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
         }}
       >
       {/* Header */}
-      <header className="rant-enter-down flex-none flex items-center justify-between px-5 md:px-7 h-[64px] border-b border-[#221940]">
-        <div className="flex items-center gap-3.5">
-          <span
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[14px] font-semibold"
-            style={{
-              background:
-                "linear-gradient(135deg,rgba(255,46,136,.18),rgba(255,122,60,.18))",
-              border: "1px solid #4a2a4f",
-              color: "#ffb38a",
-            }}
-          >
-            {meta.emoji} {meta.label} <span className="opacity-70">· {MOOD_EMOJI[mood]}</span>
-          </span>
+      <header className="rant-enter-down relative z-30 flex-none flex items-center justify-between px-3 md:px-7 h-[64px] border-b border-[#221940]">
+        <div className="flex items-center gap-2.5 md:gap-3.5">
           <button
             type="button"
-            onClick={() => router.push("/setup")}
-            className="text-[14px] font-semibold text-[#9b8fc4] underline underline-offset-[3px] cursor-pointer hover:text-[#cbbef0] transition-colors"
+            onClick={() => setNavOpen(true)}
+            aria-label="Open menu"
+            className="md:hidden w-9 h-9 flex-none rounded-lg flex items-center justify-center text-[#cbbef0] hover:bg-[#221940] cursor-pointer transition-colors text-[18px]"
           >
-            Switch Vibe
+            ☰
           </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setVibeMenuOpen((o) => !o)}
+              disabled={isStreaming || summarizing || !greetingDone}
+              title="Switch vibe"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[14px] font-semibold cursor-pointer transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                background:
+                  "linear-gradient(135deg,rgba(255,46,136,.18),rgba(255,122,60,.18))",
+                border: "1px solid #4a2a4f",
+                color: "#ffb38a",
+              }}
+            >
+              {meta.emoji} {meta.label} <span className="opacity-70">· {MOOD_EMOJI[mood]}</span>
+              <span className="opacity-70 text-[11px]">▾</span>
+            </button>
+
+            {vibeMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setVibeMenuOpen(false)} />
+                <div
+                  className="rant-pop absolute left-0 mt-2 z-40 w-52 rounded-[14px] p-1.5"
+                  style={{ background: "#1a1232", border: "1px solid #2a2046" }}
+                >
+                  <p className="px-3 pt-1 pb-1.5 text-[11px] uppercase tracking-[0.06em] text-[#6f6396] font-semibold">
+                    Switch vibe
+                  </p>
+                  {VIBE_KEYS.map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => switchVibe(v)}
+                      className="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-[10px] cursor-pointer transition-colors hover:bg-[#241a40]"
+                      style={{ color: v === vibe ? "#ffb38a" : "#cbbef0" }}
+                    >
+                      <span className="text-[18px]">{VIBE_META[v].emoji}</span>
+                      <span className="text-[14px] font-medium">{VIBE_META[v].label}</span>
+                      {v === vibe && <span className="ml-auto text-[12px]">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* End Rant → generates the summary screen. */}
@@ -314,6 +425,18 @@ export default function ChatBox({ vibe, mood }: { vibe: Vibe; mood: Mood }) {
       <div ref={scrollRef} className="rant-scroll flex-1 overflow-y-auto px-5 md:px-7 py-7 flex flex-col items-center">
         <div className="w-full max-w-[760px] flex flex-col gap-[18px]">
           {messages.map((m, i) => {
+            if (m.system) {
+              return (
+                <div
+                  key={i}
+                  className="rant-msg-in self-center my-1 flex items-center gap-2 text-[12px] text-[#8a7cb8]"
+                >
+                  <span className="h-px w-8" style={{ background: "#2e2350" }} />
+                  {m.content}
+                  <span className="h-px w-8" style={{ background: "#2e2350" }} />
+                </div>
+              );
+            }
             if (m.role === "assistant") {
               // Don't render the empty streaming slot — the dots stand in for it.
               if (m.content === "") return null;

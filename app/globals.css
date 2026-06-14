@@ -165,3 +165,18 @@ body {
   animation: rant-pop 0.16s ease-out both;
   transform-origin: top right;
 }
+
+/* Centered modal entrance (scale + fade from the middle). */
+@keyframes rant-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.rant-modal-in {
+  animation: rant-modal-in 0.18s ease-out both;
+}

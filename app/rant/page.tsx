@@ -11,6 +11,7 @@
 
 import { redirect } from "next/navigation";
 import ChatBox from "@/components/ChatBox";
+import RequireAuth from "@/components/RequireAuth";
 import type { Vibe, Mood } from "@/lib/types";
 
 const VIBES: Vibe[] = ["hype", "roast", "supportive", "reframe"];
@@ -30,5 +31,9 @@ export default async function RantPage({
     redirect("/");
   }
 
-  return <ChatBox vibe={vibe as Vibe} mood={mood as Mood} />;
+  return (
+    <RequireAuth>
+      <ChatBox vibe={vibe as Vibe} mood={mood as Mood} />
+    </RequireAuth>
+  );
 }

@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import Logo from "@/components/Logo";
 import type { Vibe, Mood } from "@/lib/types";
 
 // Display labels come from the design; the `value` is the canonical key
@@ -30,26 +31,42 @@ export default function SetupPage() {
   const [mood, setMood] = useState<Mood | null>(null);
   const [username, setUsername] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [gate, setGate] = useState<"checking" | "ok">("checking");
 
   useEffect(() => {
+    // Starting a new rant from here should always begin fresh.
+    try {
+      sessionStorage.removeItem("rantai:active");
+    } catch {
+      /* ignore */
+    }
+
     const configured =
       !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
       !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!configured) return;
+    if (!configured) {
+      setGate("ok"); // can't gate without auth configured
+      return;
+    }
     (async () => {
       try {
         const supabase = createClient();
         const { data } = await supabase.auth.getUser();
+        if (!data.user) {
+          router.replace("/login");
+          return;
+        }
         setUsername(
-          (data.user?.user_metadata?.username as string) ||
-            data.user?.email?.split("@")[0] ||
+          (data.user.user_metadata?.username as string) ||
+            data.user.email?.split("@")[0] ||
             "",
         );
+        setGate("ok");
       } catch {
-        /* not signed in */
+        router.replace("/login");
       }
     })();
-  }, []);
+  }, [router]);
 
   async function signOut() {
     try {
@@ -70,6 +87,20 @@ export default function SetupPage() {
     router.push(`/rant?vibe=${vibe}&mood=${mood}`);
   }
 
+  if (gate === "checking") {
+    return (
+      <main
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          background:
+            "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",
+        }}
+      >
+        <span className="animate-pulse inline-flex"><Logo size={40} /></span>
+      </main>
+    );
+  }
+
   return (
     <main
       className="min-h-screen flex flex-col px-6 py-6"
@@ -80,6 +111,14 @@ export default function SetupPage() {
     >
       {/* Top bar */}
       <header className="w-full flex items-center justify-end gap-3 relative z-20">
+        <button
+          type="button"
+          onClick={() => router.push("/insights")}
+          className="px-4 py-2 rounded-full text-[14px] font-semibold text-[#cbbef0] bg-[#1d1535] border border-[#2a2046] hover:border-[#3a2c63] cursor-pointer transition-colors"
+          style={{ fontFamily: display }}
+        >
+          Stats
+        </button>
         <button
           type="button"
           onClick={() => router.push("/history")}
@@ -132,9 +171,9 @@ export default function SetupPage() {
           <div className="relative flex items-center justify-center">
             <span
               aria-hidden="true"
-              className="absolute right-full mr-3 top-1/2 -translate-y-1/2 text-[44px] leading-none"
+              className="absolute right-full mr-3 top-1/2 -translate-y-1/2 leading-none"
             >
-              ⚡
+              <Logo size={46} />
             </span>
             <span
               className="font-bold text-[52px] tracking-[-0.03em]"

@@ -21,8 +21,9 @@ const RESPONSE_SCHEMA = {
     summary: { type: Type.STRING, description: "2-3 sentences summarizing the rant" },
     intensity: { type: Type.INTEGER, description: "How heated the rant was, 1-10" },
     villain: { type: Type.STRING, description: "The main person or thing they were mad at" },
+    villainKey: { type: Type.STRING, description: "Short lowercase canonical tag for the same villain so repeats match across rants, e.g. 'the mouse', 'my boss'" },
   },
-  required: ["title", "summary", "intensity", "villain"],
+  required: ["title", "summary", "intensity", "villain", "villainKey"],
 };
 
 export async function POST(request: Request) {
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
         summary: data.summary || "",
         intensity,
         villain: data.villain || "Unknown",
+        villainKey: (data.villainKey || data.villain || "Unknown").toString().trim(),
       } satisfies RantSummary);
     } catch (err) {
       lastErr = err;

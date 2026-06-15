@@ -16,7 +16,8 @@ export interface RantSummary {
   title: string; // funny/dramatic title, max ~8 words
   summary: string; // 2-3 sentences
   intensity: number; // 1-10
-  villain: string; // who/what they were mad at
+  villain: string; // who/what they were mad at (flavorful, for display)
+  villainKey?: string; // short canonical tag for grouping repeats (e.g. "the mouse")
 }
 
 // A full row in the Supabase `rants` table.
@@ -30,6 +31,7 @@ export interface RantSession {
   messages: Message[];
   intensity: number;
   villain: string;
+  villain_key?: string | null;
   created_at: string;
 }
 

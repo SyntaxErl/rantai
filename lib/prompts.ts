@@ -44,4 +44,5 @@ export const SUMMARY_PROMPT = `The following is a rant conversation. Please resp
 - title: a funny or dramatic title for this rant (max 8 words)
 - summary: 2-3 sentences summarizing what happened
 - intensity: a number from 1-10 rating how heated the rant was
-- villain: the main person or thing the user was mad at`;
+- villain: the main person or thing the user was mad at
+- villainKey: a SHORT canonical tag naming just that same villain (1-4 words, lowercase, no extra description), chosen so that ranting about the same thing again yields the IDENTICAL tag — e.g. "the mouse", "my boss", "my body". Keep it generic and stable, not specific to this one rant.`;

@@ -27,6 +27,7 @@ const MOODS: { key: Mood; emoji: string; label: string }[] = [
 
 type Row = {
   villain: string | null;
+  villain_key?: string | null;
   intensity: number | null;
   vibe: Vibe;
   mood: Mood;
@@ -67,7 +68,7 @@ export default function InsightsPage() {
         const supabase = createClient();
         const { data, error } = await supabase
           .from("rants")
-          .select("villain,intensity,vibe,mood,created_at")
+          .select("villain,villain_key,intensity,vibe,mood,created_at")
           .order("created_at", { ascending: false });
         if (error) throw error;
         setRows((data ?? []) as Row[]);
@@ -87,13 +88,23 @@ export default function InsightsPage() {
   const streak = rows ? computeStreak(rows.map((r) => r.created_at)) : 0;
 
   const villains = (() => {
-    const counts = new Map<string, number>();
+    const counts = new Map<string, number>(); // normalized key -> count
+    const labels = new Map<string, string>(); // normalized key -> display label
     (rows ?? []).forEach((r) => {
-      const v = (r.villain || "").trim();
-      if (!v || v.toLowerCase() === "unknown") return;
-      counts.set(v, (counts.get(v) ?? 0) + 1);
+      // Prefer the canonical tag; fall back to the flavorful villain for old rants.
+      const raw = (r.villain_key || r.villain || "").trim();
+      if (!raw || raw.toLowerCase() === "unknown") return;
+      // Normalize so "The mouse" / "my mouse" / "mouse" all merge into one bucket.
+      const norm = raw.toLowerCase().replace(/^(the|a|an|my)\s+/i, "").trim();
+      if (!norm) return;
+      counts.set(norm, (counts.get(norm) ?? 0) + 1);
+      if (!labels.has(norm)) {
+        labels.set(norm, raw.charAt(0).toUpperCase() + raw.slice(1));
+      }
     });
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    return [...counts.entries()]
+      .map(([norm, count]) => [labels.get(norm) ?? norm, count] as [string, number])
+      .sort((a, b) => b[1] - a[1]);
   })();
   const topVillainCount = villains[0]?.[1] ?? 1;
 

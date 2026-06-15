@@ -297,6 +297,7 @@ export default function ChatBox({ vibe: initialVibe, mood }: { vibe: Vibe; mood:
             summary: data.summary,
             intensity: data.intensity,
             villain: data.villain,
+            villain_key: data.villainKey ?? data.villain,
             messages: messages.slice(firstUser).filter((m) => !m.system),
           });
         } catch (saveErr) {

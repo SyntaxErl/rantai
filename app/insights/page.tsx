@@ -110,7 +110,7 @@ export default function InsightsPage() {
 
   return (
     <main
-      className="h-screen overflow-y-auto rant-scroll px-6 py-10 rant-fade-in"
+      className="h-dvh overflow-y-auto rant-scroll px-6 py-10 rant-fade-in"
       style={{
         background:
           "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",

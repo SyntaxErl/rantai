@@ -74,7 +74,7 @@ export default function ChatSidebar({
       />
 
       <aside
-        className={`flex flex-col h-screen border-r border-[#221940] overflow-hidden
+        className={`flex flex-col h-dvh border-r border-[#221940] overflow-hidden
           fixed top-0 left-0 z-50 transition-all duration-300 ease-out
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
           md:static md:translate-x-0 md:z-auto`}

@@ -59,7 +59,7 @@ export default function Landing() {
   if (status === "checking") {
     return (
       <main
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-dvh flex items-center justify-center"
         style={{
           background:
             "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",
@@ -72,7 +72,7 @@ export default function Landing() {
 
   return (
     <main
-      className="h-screen overflow-y-auto rant-scroll px-6 py-16 flex flex-col items-center"
+      className="h-dvh overflow-y-auto rant-scroll px-6 py-16 flex flex-col items-center"
       style={{
         background:
           "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",

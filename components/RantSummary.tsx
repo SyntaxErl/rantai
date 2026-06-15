@@ -27,7 +27,7 @@ export default function RantSummary({
 
   return (
     <main
-      className="min-h-screen overflow-y-auto flex items-center justify-center px-6 py-14 rant-fade-in"
+      className="min-h-dvh overflow-y-auto flex items-center justify-center px-6 py-14 rant-fade-in"
       style={{
         background:
           "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",

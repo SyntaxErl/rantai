@@ -91,9 +91,9 @@ export default function HistoryCard({
           aria-expanded={open}
           className="flex-1 min-w-0 text-left cursor-pointer"
         >
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start justify-between gap-3">
             <span
-              className="font-semibold text-[17px] text-[#f4f0ff] truncate"
+              className={`font-semibold text-[17px] text-[#f4f0ff] ${open ? "" : "truncate"}`}
               style={{ fontFamily: display }}
             >
               {rant.title}

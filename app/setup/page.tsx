@@ -90,7 +90,7 @@ export default function SetupPage() {
   if (gate === "checking") {
     return (
       <main
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-dvh flex items-center justify-center"
         style={{
           background:
             "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",
@@ -103,7 +103,7 @@ export default function SetupPage() {
 
   return (
     <main
-      className="min-h-screen flex flex-col px-6 py-6"
+      className="min-h-dvh flex flex-col px-6 py-6"
       style={{
         background:
           "radial-gradient(120% 70% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",

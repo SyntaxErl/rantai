@@ -337,10 +337,10 @@ export default function ChatBox({ vibe: initialVibe, mood }: { vibe: Vibe; mood:
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       <ChatSidebar mobileOpen={navOpen} onClose={() => setNavOpen(false)} />
       <main
-        className="flex flex-col flex-1 h-screen overflow-hidden rant-fade-in"
+        className="flex flex-col flex-1 h-dvh overflow-hidden rant-fade-in"
         style={{
           background:
             "radial-gradient(120% 60% at 50% -8%, #2c1656 0%, #150d2b 42%, #0a0712 100%)",

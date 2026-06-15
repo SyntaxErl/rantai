@@ -87,26 +87,15 @@ export default function InsightsPage() {
       : "0";
   const streak = rows ? computeStreak(rows.map((r) => r.created_at)) : 0;
 
-  const villains = (() => {
-    const counts = new Map<string, number>(); // normalized key -> count
-    const labels = new Map<string, string>(); // normalized key -> display label
-    (rows ?? []).forEach((r) => {
-      // Prefer the canonical tag; fall back to the flavorful villain for old rants.
-      const raw = (r.villain_key || r.villain || "").trim();
-      if (!raw || raw.toLowerCase() === "unknown") return;
-      // Normalize so "The mouse" / "my mouse" / "mouse" all merge into one bucket.
-      const norm = raw.toLowerCase().replace(/^(the|a|an|my)\s+/i, "").trim();
-      if (!norm) return;
-      counts.set(norm, (counts.get(norm) ?? 0) + 1);
-      if (!labels.has(norm)) {
-        labels.set(norm, raw.charAt(0).toUpperCase() + raw.slice(1));
-      }
-    });
-    return [...counts.entries()]
-      .map(([norm, count]) => [labels.get(norm) ?? norm, count] as [string, number])
-      .sort((a, b) => b[1] - a[1]);
-  })();
-  const topVillainCount = villains[0]?.[1] ?? 1;
+  // Each rant contributes its villain, ranked by how heated that rant was.
+  // No grouping, so inconsistent AI villain names can't break it.
+  const villains = (rows ?? [])
+    .map((r) => ({
+      name: (r.villain || "").trim(),
+      intensity: Math.max(0, Math.min(10, Math.round(Number(r.intensity) || 0))),
+    }))
+    .filter((v) => v.name && v.name.toLowerCase() !== "unknown")
+    .sort((a, b) => b.intensity - a.intensity);
 
   const moodCounts = MOODS.map((m) => ({
     ...m,
@@ -186,7 +175,7 @@ export default function InsightsPage() {
                 <h2 className="m-0 font-bold text-[22px] tracking-[-0.02em]" style={{ fontFamily: display }}>
                   🦹 Rogues Gallery
                 </h2>
-                <p className="mt-1 mb-0 text-[13px] text-[#9b8fc4]">The villains you keep coming back to.</p>
+                <p className="mt-1 mb-0 text-[13px] text-[#9b8fc4]">Your fiercest villains, ranked by how heated the rant got.</p>
               </div>
 
               {villains.length === 0 ? (
@@ -204,29 +193,29 @@ export default function InsightsPage() {
                         Your nemesis
                       </span>
                       <p className="m-0 font-bold text-[20px] truncate" style={{ fontFamily: display }}>
-                        {villains[0][0]}
+                        {villains[0].name}
                       </p>
                       <span className="text-[13px] text-[#9b8fc4]">
-                        {villains[0][1]} {villains[0][1] === 1 ? "rant" : "rants"}
+                        Intensity {villains[0].intensity}/10
                       </span>
                     </div>
                   </div>
 
                   {/* The rest */}
                   <div className="flex flex-col gap-2.5">
-                    {villains.slice(1, 8).map(([name, count]) => (
-                      <div key={name} className="flex items-center gap-3">
-                        <span className="flex-1 min-w-0 truncate text-[15px] text-[#cbbef0]">{name}</span>
+                    {villains.slice(1, 8).map((v, i) => (
+                      <div key={`${v.name}-${i}`} className="flex items-center gap-3">
+                        <span className="flex-1 min-w-0 truncate text-[15px] text-[#cbbef0]">{v.name}</span>
                         <div className="flex-none w-[120px] h-[8px] rounded-full overflow-hidden" style={{ background: "#241a40" }}>
                           <div
                             className="h-full rounded-full"
                             style={{
-                              width: `${Math.max(12, (count / topVillainCount) * 100)}%`,
+                              width: `${Math.max(12, (v.intensity / 10) * 100)}%`,
                               background: "linear-gradient(90deg,#ff2e88,#ff7a3c)",
                             }}
                           />
                         </div>
-                        <span className="flex-none w-6 text-right text-[13px] text-[#9b8fc4]">{count}</span>
+                        <span className="flex-none w-9 text-right text-[13px] text-[#9b8fc4]">{v.intensity}/10</span>
                       </div>
                     ))}
                   </div>
